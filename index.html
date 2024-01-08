@@ -1,123 +1,135 @@
-<html>
-  <head>
-    <title>WebUSB Serial Sample Application</title>
-  </head>
-
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+</head>
 <body>
-  <script>
-var serial = {};
-
-(function() {
-  'use strict';
-
-  serial.getPorts = function() {
-    return navigator.usb.getDevices().then(devices => {
-      return devices.map(device => new serial.Port(device));
-    });
-  };
-
-  serial.requestPort = function() {
-    const filters = [
-      { 'vendorId': 0X065A },
-    ];
-    return navigator.usb.requestDevice({ 'filters': filters }).then(
-      device => new serial.Port(device)
-    );
-  }
-
-  serial.Port = function(device) {
-    this.device_ = device;
-  };
-
-  serial.Port.prototype.connect = function() {
-    let readLoop = () => {
-      const {
-        endpointNumber
-      } = this.device_.configuration.interfaces[0].alternate.endpoints[0]
-      this.device_.transferIn(endpointNumber, 64).then(result => {
-        this.onReceive(result.data);
-        readLoop();
-      }, error => {
-        this.onReceiveError(error);
-      });
-    };
-
-    return this.device_.open()
-        .then(() => {
-          if (this.device_.configuration === null) {
-            return this.device_.selectConfiguration(1);
+    <script>
+        var serial = {};
+        
+        (function() {
+          'use strict';
+        
+          serial.getPorts = function() {
+            return navigator.usb.getDevices().then(devices => {
+              return devices.map(device => new serial.Port(device));
+            });
+          };
+        
+          serial.requestPort = function() {
+            const filters = [
+                { 'vendorId': 0X065A },
+            ];
+            return navigator.usb.requestDevice({ 'filters': filters }).then(
+              device => new serial.Port(device)
+            );
           }
-        })
-        .then(() => this.device_.claimInterface(0))
-        .then(() => {
-          readLoop();
-        });
-  };
+        
+          serial.Port = function(device) {
+            this.device_ = device;
+          };
+        
+          serial.Port.prototype.connect = function() {
+            let readLoop = () => {
+              const {
+                endpointNumber
+              } = this.device_.configuration.interfaces[0].alternate.endpoints[0]
+              this.device_.transferIn(endpointNumber, 64).then(result => {
+                this.onReceive(result.data);
+                readLoop();
+              }, error => {
+                this.onReceiveError(error);
+              });
+            };
+        
+            return this.device_.open()
+                .then(() => {
+                  if (this.device_.configuration === null) {
+                    return this.device_.selectConfiguration(1);
+                  }
+                })
+                .then(() => this.device_.claimInterface(0))
+                .then(() => {
+                  readLoop();
+                });
+          };
+        
+          serial.Port.prototype.disconnect = function() {
+            return this.device_.close();
+          };
+        
+          serial.Port.prototype.send = function(data) {
+            const {
+              endpointNumber
+            } = this.device_.configuration.interfaces[0].alternate.endpoints[1]
+            return this.device_.transferOut(endpointNumber, data);
+          };
+        })();
+        
+        let port;
+        
+        function connect() {
+          port.connect().then(() => {
+            port.onReceive = data => {
+              let textDecoder = new TextDecoder();
+              console.log("Received:", textDecoder.decode(data));
+              document.getElementById('output').value += textDecoder.decode(data);
+            }
+            port.onReceiveError = error => {
+              console.error(error);
+              document.querySelector("#connect").style = "visibility: initial";
+              port.disconnect();
+            };
+          });
+        }
+        
+        function send(string) {
+          console.log("sending to serial:" + string.length);
+          if (string.length === 0)
+            return;
+          console.log("sending to serial: [" + string +"]\n");
+        
+          let view = new TextEncoder('utf-8').encode(string);
+          console.log(view);
+          if (port) {
+            port.send(view);
+          }
+        };
+        
+        window.onload = _ => {
+          document.querySelector("#connect").onclick = function() {
+            serial.requestPort().then(selectedPort => {
+              port = selectedPort;
+              this.style = "visibility: hidden";
+              connect();
+            });
+          }
+        
+        //   document.querySelector("#submit").onclick = () => {
+        //     let source = document.querySelector("#input").value;
+        //     send(source);
+        //   }
+        }
+        
+        </script>
 
-  serial.Port.prototype.disconnect = function() {
-    return this.device_.close();
-  };
+        <div class="mt-5 container">
+            <div class="row">
+                
+                <div class="col-md-3">
+                    <button id="connect" class="btn btn-primary">Scan!</button>
+                </div>
+                <div class="col-md-3">
+                    <textarea id="output">
 
-  serial.Port.prototype.send = function(data) {
-    const {
-      endpointNumber
-    } = this.device_.configuration.interfaces[0].alternate.endpoints[1]
-    return this.device_.transferOut(endpointNumber, data);
-  };
-})();
-
-let port;
-
-function connect() {
-  port.connect().then(() => {
-    port.onReceive = data => {
-      let textDecoder = new TextDecoder();
-      console.log("Received:", textDecoder.decode(data));
-      document.getElementById('output').value += textDecoder.decode(data);
-    }
-    port.onReceiveError = error => {
-      console.error(error);
-      document.querySelector("#connect").style = "visibility: initial";
-      port.disconnect();
-    };
-  });
-}
-
-function send(string) {
-  console.log("sending to serial:" + string.length);
-  if (string.length === 0)
-    return;
-  console.log("sending to serial: [" + string +"]\n");
-
-  let view = new TextEncoder('utf-8').encode(string);
-  console.log(view);
-  if (port) {
-    port.send(view);
-  }
-};
-
-window.onload = _ => {
-  document.querySelector("#connect").onclick = function() {
-    serial.requestPort().then(selectedPort => {
-      port = selectedPort;
-      this.style = "visibility: hidden";
-      connect();
-    });
-  }
-
-  document.querySelector("#submit").onclick = () => {
-    let source = document.querySelector("#editor").value;
-    send(source);
-  }
-}
-
-</script>
- <button id="connect" style="visibility: initial">Connect To WebUSB Device</button>
- <br><br><label for="title">Sender: </label> <br>
- <textarea id="editor", rows="25" cols="80" id="source">WebUSB!</textarea>
- <br> <button id="submit">Send</button>
- <br><br>
- <label for="title">Receiver: </label> </br>
- <textarea id="output", rows="25" cols="80" id="source"></textarea>
+                    </textarea>
+                </div>
+            </div>
+        </div>
 </body>
+</html>
