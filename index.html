@@ -37,9 +37,9 @@
                   await device.claimInterface(0);
                   console.log(device, 'Interface Claimed');
                   var result = await device.controlTransferOut({
-                    requestType: 'vendor',
+                    requestType: 'standard',
                     recipient: 'interface',
-                    request: 0x0a,  // vendor-specific request: enable channels
+                    request: 0x001,  // vendor-specific request: enable channels
                     value: 0x001,  // 0b00010011 (channels 1, 2 and 5)
                     index: 0x000   // Interface 1 is the recipient
                   });
