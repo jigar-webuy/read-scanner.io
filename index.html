@@ -36,7 +36,7 @@
                   console.log(device, 'Configuration set');
                   await device.claimInterface(0);
                   console.log(device, 'Interface Claimed');
-                  var result = await device.controlTransferOut({
+                  var result = await device.controlTransferIn({
                     requestType: 'standard',
                     recipient: 'interface',
                     request: 0x001,  // vendor-specific request: enable channels
