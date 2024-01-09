@@ -11,7 +11,6 @@
 <body>
         <div class="mt-5 container">
             <div class="row">
-                
                 <div class="col-md-3">
                     <button id="connect" class="btn btn-primary">Scan!</button>
                 </div>
@@ -31,7 +30,20 @@
                   ];
                   device = await navigator.usb.requestDevice({ 'filters': filters });
                   await device.open();
-                  console.log(device, "Device Opened");                  
+                  console.log(device, "Device Opened");   
+                  await device.selectConfiguration(1);
+                  let configuration = device.configuration;
+                  console.log(device, 'Configuration set');
+                  await device.claimInterface(0);
+                  console.log(device, 'Interface Claimed');
+                  var result = await device.controlTransferOut({
+                    requestType: 'vendor',
+                    recipient: 'interface',
+                    request: 0x0a,  // vendor-specific request: enable channels
+                    value: 0x001,  // 0b00010011 (channels 1, 2 and 5)
+                    index: 0x0001   // Interface 1 is the recipient
+                  });
+                  console.log(result, 'Result');
               }
       </script>
 </body>
