@@ -39,10 +39,10 @@
                   var result = await device.controlTransferIn({
                     requestType: 'standard',
                     recipient: 'interface',
-                    request: 0x001, 
-                    value: 0x001,  
-                    index: 0x000   
-                  });
+                    request: 0x001,  // vendor-specific request: enable channels
+                    value: 0x001,  // 0b00010011 (channels 1, 2 and 5)
+                    index: 0x000   // Interface 1 is the recipient
+                  }, 2000);
                   console.log(result, 'Result');
               }
       </script>
